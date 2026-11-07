@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intelligent Supply Chain Control Center</title>
+    <meta name="description" content="State-of-the-art MLOps supply chain optimization platform powered by multi-agent reasoning.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="glow-bg">
+        <div class="glow-circle purple"></div>
+        <div class="glow-circle cyan"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-box">
+                    <i class="fa-solid fa-network-wired logo-icon"></i>
+                </div>
+                <div>
+                    <h1>AETHER Supply Chain Control</h1>
+                    <p class="subtitle">Multi-Agent MLOps Orchestration Engine</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="cycle-badge-box">
+                    <span class="badge-label">Active Cycle</span>
+                    <span id="active-cycle-id" class="badge-value">CYC_INITIALIZING</span>
+                </div>
+                <button id="btn-trigger-cycle" class="btn-primary animate-pulse">
+                    <i class="fa-solid fa-play"></i> Run Planning Cycle
+                </button>
+            </div>
+        </header>
+
+        <!-- AGENTS STATUS BAR -->
+        <section class="agents-status-container">
+            <div class="section-title-mini">Active Orchestrator Agents</div>
+            <div class="agents-grid" id="agents-grid">
+                <!-- Dynamically populated by JS -->
+            </div>
+        </section>
+
+        <!-- MAIN LAYOUT GRID -->
+        <div class="main-grid">
+            <!-- LEFT COLUMN: CONTROLS & PARAMS -->
+            <aside class="sidebar-panel">
+                <div class="panel-card glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-sliders"></i> Platform Parameters</h2>
+                    </div>
+                    <div class="card-content">
+                        <!-- Param 1 -->
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Service Level Target (Z-Score)</span>
+                                <span class="val-display" id="val-z">1.65 (95%)</span>
+                            </div>
+                            <input type="range" id="param-z" min="1.0" max="2.58" step="0.05" value="1.65">
+                            <span class="control-help">Higher Z increases safety stock targets to avoid stockouts.</span>
+                        </div>
+                        
+                        <!-- Param 2 -->
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Weather Disruptions</span>
+                                <span class="val-display" id="val-weather">1.0x (Normal)</span>
+                            </div>
+                            <input type="range" id="param-weather" min="1.0" max="2.5" step="0.1" value="1.0">
+                            <span class="control-help">Simulates adverse transit weather and shipping latency.</span>
+                        </div>
+
+                        <!-- Param 3 -->
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Line Production Capacity</span>
+                                <span class="val-display" id="val-capacity">1.0x (Standard)</span>
+                            </div>
+                            <input type="range" id="param-capacity" min="0.5" max="1.5" step="0.1" value="1.0">
+                            <span class="control-help">Modulates maximum daily output threshold capacity.</span>
+                        </div>
+
+                        <!-- Param 4 -->
+                        <div class="control-group">
+                            <div class="control-label">
+                                <span>Market Growth Factor</span>
+                                <span class="val-display" id="val-market">5% Increase</span>
+                            </div>
+                            <input type="range" id="param-market" min="0.9" max="1.3" step="0.02" value="1.05">
+                            <span class="control-help">Forecast sentiment adjustment multiplier.</span>
+                        </div>
+
+                        <!-- Param 5 -->
+                        <div class="control-group">
+                            <label for="param-geopolitical" class="control-label-direct">Geopolitical Risk Level</label>
+                            <select id="param-geopolitical" class="custom-select">
+                                <option value="LOW" selected>Low (Normal Trade Lanes)</option>
+                                <option value="MEDIUM">Medium (Tariff Talks / Delays)</option>
+                                <option value="HIGH">High (Embargo / Transit Freeze)</option>
+                                <option value="CRITICAL">Critical (Active Blockade)</option>
+                            </select>
+                        </div>
+
+                        <button id="btn-save-params" class="btn-secondary w-full">
+                            <i class="fa-solid fa-save"></i> Save Parameters
+                        </button>
+                    </div>
+                </div>
+
+                <!-- QUICK ACTIONS -->
+                <div class="panel-card glass-panel margin-top">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-bolt"></i> Supervisor Commands</h2>
+                    </div>
+                    <div class="card-content flex-row gap-sm">
+                        <button id="btn-reset-db" class="btn-danger flex-1">
+                            <i class="fa-solid fa-rotate-right"></i> Reset DB
+                        </button>
+                        <button id="btn-simulate-delay" class="btn-warning flex-1">
+                            <i class="fa-solid fa-cloud-bolt"></i> Inject Delay
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- CENTER WORKSPACE: WORKSPACE WITH TABS -->
+            <main class="workspace-panel">
+                <div class="workspace-tabs glass-panel">
+                    <button class="tab-link active" data-tab="tab-demand">
+                        <i class="fa-solid fa-chart-line"></i> Demand Forecast
+                    </button>
+                    <button class="tab-link" data-tab="tab-inventory">
+                        <i class="fa-solid fa-boxes-stacked"></i> Inventory Status
+                    </button>
+                    <button class="tab-link" data-tab="tab-production">
+                        <i class="fa-solid fa-industry"></i> Production Plan
+                    </button>
+                    <button class="tab-link" data-tab="tab-contracts">
+                        <i class="fa-solid fa-file-signature"></i> Suppliers & Contracts
+                    </button>
+                    <button class="tab-link" data-tab="tab-logistics">
+                        <i class="fa-solid fa-truck-fast"></i> Logistics & GPS
+                    </button>
+                </div>
+
+                <!-- TAB PANELS -->
+                <div class="tab-content-container">
+                    
+                    <!-- TAB: DEMAND FORECAST -->
+                    <div id="tab-demand" class="tab-panel active">
+                        <div class="panel-grid-2">
+                            <div class="glass-panel p-md flex-col flex-2">
+                                <div class="chart-header">
+                                    <h3>Ensemble Forecast vs Sales History</h3>
+                                    <div class="sku-selector-box">
+                                        <label for="demand-sku-select">SKU:</label>
+                                        <select id="demand-sku-select" class="custom-select-small"></select>
+                                    </div>
+                                </div>
+                                <div class="chart-wrapper">
+                                    <canvas id="demandChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-md flex-col flex-1">
+                                <h3>Forecast Accuracy KPIs</h3>
+                                <div class="metrics-grid margin-top">
+                                    <div class="metric-card cyan-border">
+                                        <div class="metric-val">94.8%</div>
+                                        <div class="metric-lbl">MAPE Accuracy</div>
+                                    </div>
+                                    <div class="metric-card purple-border">
+                                        <div class="metric-val">-1.2%</div>
+                                        <div class="metric-lbl">Forecast Bias</div>
+                                    </div>
+                                    <div class="metric-card green-border">
+                                        <div class="metric-val">90 Days</div>
+                                        <div class="metric-lbl">Horizon</div>
+                                    </div>
+                                </div>
+                                <div class="explanation-box margin-top">
+                                    <h4>Ensemble Weights:</h4>
+                                    <ul>
+                                        <li><span class="weight-dot es"></span> Exponential Smoothing (60%)</li>
+                                        <li><span class="weight-dot lr"></span> Linear Regression Trend (30%)</li>
+                                        <li><span class="weight-dot market"></span> Sentiment multiplier (10%)</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: INVENTORY STATUS -->
+                    <div id="tab-inventory" class="tab-panel">
+                        <div class="glass-panel p-md w-full">
+                            <div class="card-header">
+                                <h3>Inventory Level Optimization Metrics</h3>
+                            </div>
+                            <div class="table-container margin-top">
+                                <table id="table-inventory">
+                                    <thead>
+                                        <tr>
+                                            <th>SKU ID</th>
+                                            <th>Name</th>
+                                            <th>Qty on Hand</th>
+                                            <th>Safety Stock</th>
+                                            <th>Reorder Point</th>
+                                            <th>EOQ (Reorder Vol)</th>
+                                            <th>Unit Cost</th>
+                                            <th>Action Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inventory-tbody">
+                                        <!-- JS populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: PRODUCTION PLAN -->
+                    <div id="tab-production" class="tab-panel">
+                        <div class="panel-grid-2">
+                            <div class="glass-panel p-md flex-col flex-2">
+                                <div class="chart-header">
+                                    <h3>30-Day Planned Production Schedule</h3>
+                                    <select id="prod-sku-select" class="custom-select-small"></select>
+                                </div>
+                                <div class="chart-wrapper">
+                                    <canvas id="productionChart"></canvas>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-md flex-col flex-1">
+                                <h3>Line Utilizations</h3>
+                                <div class="util-bar-container margin-top" id="production-utilizations">
+                                    <!-- Populated by JS -->
+                                </div>
+
+                                <div class="override-panel margin-top">
+                                    <h4>Supervisor Production Override</h4>
+                                    <div class="form-group margin-top">
+                                        <label for="override-sku">SKU</label>
+                                        <select id="override-sku" class="custom-select"></select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="override-date">Date</label>
+                                        <input type="date" id="override-date" class="custom-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="override-qty">New Planned Volume</label>
+                                        <input type="number" id="override-qty" class="custom-input" min="0">
+                                    </div>
+                                    <button id="btn-submit-override" class="btn-primary w-full margin-top">
+                                        Submit Override
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: SUPPLIERS & CONTRACTS -->
+                    <div id="tab-contracts" class="tab-panel">
+                        <div class="panel-grid-2">
+                            <div class="glass-panel p-md flex-col">
+                                <h3>Active Supplier Performance Scorecards</h3>
+                                <div class="supplier-cards-grid margin-top" id="supplier-cards">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                            <div class="glass-panel p-md flex-col">
+                                <h3>Legal Contract Terms (RAG Extracted)</h3>
+                                <div class="contract-terms-container margin-top" id="contract-terms">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB: LOGISTICS & GPS -->
+                    <div id="tab-logistics" class="tab-panel">
+                        <div class="panel-grid-2">
+                            <div class="glass-panel p-md flex-col flex-2">
+                                <h3>Active Shipment Transit Routing Map (Simulated GPS)</h3>
+                                <div class="simulated-map margin-top" id="logistics-map">
+                                    <!-- Map visualization container -->
+                                    <div class="dest-point" style="top: 50%; left: 65%;">
+                                        <span class="point-label"><i class="fa-solid fa-warehouse"></i> Warehouse East</span>
+                                    </div>
+                                    <div id="map-shipments-container"></div>
+                                </div>
+                            </div>
+                            <div class="glass-panel p-md flex-col flex-1">
+                                <h3>Shipment Status Log</h3>
+                                <div class="shipment-status-list margin-top" id="shipments-list">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+            <!-- RIGHT COLUMN: RISKS & LOGS -->
+            <aside class="sidebar-panel">
+                <!-- RISKS HEAT MAP -->
+                <div class="panel-card glass-panel">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-triangle-exclamation text-yellow"></i> System Risk Heat Map</h2>
+                    </div>
+                    <div class="card-content">
+                        <div class="risks-list" id="risks-list">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SYSTEM ACTIVITY FEED -->
+                <div class="panel-card glass-panel margin-top flex-1 flex-col">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-receipt"></i> MLOps Agent Activity Feed</h2>
+                    </div>
+                    <div class="card-content log-feed-container flex-1" id="log-feed">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- CUSTOM JS -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
